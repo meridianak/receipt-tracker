@@ -753,7 +753,7 @@ async function startApp() {
 async function refreshData() {
   try {
     const res = await graph(
-      `/sites/${siteId}/lists/${encodeURIComponent(CONFIG.purchasesListName)}/items?$expand=fields&$top=999&$orderby=fields/PurchaseDate desc`
+      `/sites/${siteId}/lists/${encodeURIComponent(CONFIG.purchasesListName)}/items?$expand=fields&$top=999`
     );
     purchases = (res.value || []).map(item => {
       const f = item.fields;
