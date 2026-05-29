@@ -250,6 +250,16 @@
     #toast.error   { background: var(--red); }
     #toast.info    { background: var(--brand-light); }
 
+    /* Spending alert */
+    .amount-alert { display: none; background: var(--red-bg); border: 1px solid #fca5a5; border-radius: 7px; padding: 8px 12px; font-size: 12px; font-weight: 600; color: #dc2626; margin-top: 6px; }
+    .amount-alert.show { display: flex; align-items: center; gap: 8px; }
+    /* Project badge in table */
+    .proj-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 8px; background: var(--purple-bg); color: var(--purple); white-space: nowrap; }
+    /* Duplicate warning modal */
+    .dup-warning { background: var(--yellow-bg); border: 2px solid var(--yellow); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .dup-warning h4 { font-size: 14px; font-weight: 800; color: #92400e; margin-bottom: 6px; }
+    .dup-warning p  { font-size: 13px; color: #78350f; line-height: 1.5; }
+    .dup-warning .dup-id { font-family: monospace; font-size: 11px; background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 4px; }
     @media (max-width: 640px) {
       header, nav, main { padding-left: 16px; padding-right: 16px; }
       .form-grid { grid-template-columns: 1fr; }
@@ -263,7 +273,7 @@
 
 <!-- Sign-in Screen -->
 <div class="screen" id="signin-screen" style="display:none">
-  <div class="screen-logo">$</div>
+  <div class="screen-logo">M</div>
   <h2>Meridian Expense Tracker</h2>
   <p>Log and track company credit card purchases. Sign in with your Meridian Microsoft account.</p>
   <button class="ms-btn" onclick="signIn()">
@@ -275,7 +285,7 @@
 
 <!-- Loading Screen -->
 <div class="screen" id="loading-screen">
-  <div class="screen-logo">$</div>
+  <div class="screen-logo">M</div>
   <div class="spinner"></div>
   <p id="loading-msg">Initializing…</p>
 </div>
@@ -289,16 +299,40 @@
 <!-- Header -->
 <header>
   <div class="logo">
-    <div class="logo-icon">$</div>
+    <div class="logo-icon">M</div>
     <div><h1>Expense Receipt Tracker</h1><p>Meridian Management</p></div>
   </div>
-  <div class="header-right">
+  <div class="header-right" style="display:flex;align-items:center;gap:10px;">
+    <button class="user-chip" onclick="openSettings()" title="Settings" style="padding:8px 12px;gap:6px;">
+      ⚙ Settings
+    </button>
     <button class="user-chip" onclick="signOut()">
       <div class="user-avatar" id="user-avatar">?</div>
       <span id="user-name">Loading…</span>
     </button>
   </div>
 </header>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-modal" style="display:none" onclick="if(event.target===this)closeSettings()">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>Settings</h3>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Spending Alert Threshold ($)</label>
+        <input type="number" id="settings-threshold" placeholder="500" min="1" step="1" style="width:100%">
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">A warning appears on the purchase form when a single amount meets or exceeds this value.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
 
 <!-- Nav -->
 <nav>
@@ -380,6 +414,7 @@
           <th onclick="sortLog('description')">Description <span id="si-description">↕</span></th>
           <th onclick="sortLog('vendor')">Vendor <span id="si-vendor">↕</span></th>
           <th onclick="sortLog('category')">Category <span id="si-category">↕</span></th>
+          <th onclick="sortLog('project')">Project <span id="si-project">↕</span></th>
           <th onclick="sortLog('amount')">Amount <span id="si-amount">↕</span></th>
           <th onclick="sortLog('billable')">Billable <span id="si-billable">↕</span></th>
           <th class="no-sort">Receipt</th>
@@ -407,6 +442,7 @@
       <div class="dash-card"><h3>Billable Split by Employee</h3><div id="chart-billable-person"></div></div>
       <div class="dash-card"><h3>Purchase Activity by Day of Week</h3><div id="chart-activity"></div></div>
       <div class="dash-card"><h3>Approval Status</h3><div id="chart-approval"></div></div>
+      <div class="dash-card"><h3>Billable Spend by Project</h3><div id="chart-projects"></div></div>
     </div>
   </main>
 </div>
@@ -424,7 +460,11 @@
       <div class="form-group"><label>Purchase Date <span class="req">*</span></label><input type="date" id="f-date"></div>
       <div class="form-group full"><label>What was purchased? <span class="req">*</span></label><input type="text" id="f-description" placeholder="Brief description"></div>
       <div class="form-group"><label>Vendor / Store <span class="req">*</span></label><input type="text" id="f-vendor" placeholder="Where was the purchase made?"></div>
-      <div class="form-group"><label>Purchase Amount ($) <span class="req">*</span></label><input type="number" id="f-amount" placeholder="0.00" step="0.01" min="0"></div>
+      <div class="form-group">
+        <label>Purchase Amount ($) <span class="req">*</span></label>
+        <input type="number" id="f-amount" placeholder="0.00" step="0.01" min="0" oninput="checkAmountAlert()">
+        <div class="amount-alert" id="amount-alert">⚠ This purchase exceeds the $<span id="alert-threshold"></span> alert threshold — flag for review.</div>
+      </div>
       <div class="form-group full"><label>Reason for Purchase <span class="req">*</span></label><textarea id="f-reason" placeholder="Explain why this purchase was necessary…"></textarea></div>
       <div class="form-group full">
         <label>Billable Classification <span class="req">*</span></label>
@@ -433,6 +473,10 @@
           <button type="button" class="toggle-btn no"     id="toggle-no"     onclick="setBillable('Non-billable')">✗ Non-billable</button>
           <button type="button" class="toggle-btn unsure" id="toggle-unsure" onclick="setBillable('Unsure')">? Unsure</button>
         </div>
+      </div>
+      <div class="form-group full" id="project-group">
+        <label>Project / Job Code <span class="req" id="project-req" style="display:none">*</span> <span id="project-hint" style="color:var(--muted);font-weight:400;font-size:11px">(optional)</span></label>
+        <input type="text" id="f-project" placeholder="e.g. Client Name, Job #, Project Code…">
       </div>
       <div class="form-group full">
         <label>Category <span class="req">*</span></label>
@@ -468,6 +512,25 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('purchase-modal')">Cancel</button>
       <button class="btn-confirm" id="save-btn" onclick="savePurchase()">Save Purchase</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ DUPLICATE WARNING MODAL ══════════ -->
+<div class="modal-overlay" id="dup-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h3>Possible Duplicate</h3>
+      <button class="modal-close" onclick="closeModal('dup-modal')">✕</button>
+    </div>
+    <div class="dup-warning">
+      <h4>⚠ Similar purchase already exists</h4>
+      <p id="dup-detail">A purchase with the same vendor, amount, and date was already logged.</p>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">If this is a legitimate separate purchase, click <strong>Save Anyway</strong>. If it's a duplicate, click Cancel and delete the extra entry.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('dup-modal')">Cancel</button>
+      <button class="btn-confirm" onclick="confirmSaveDuplicate()">Save Anyway</button>
     </div>
   </div>
 </div>
@@ -585,8 +648,18 @@ const CONFIG = {
   siteHostname:      "meridianak.sharepoint.com",
   purchasesListName: "PurchaseRecords",
   receiptLibrary:    "ReceiptImages",
-  pollInterval:      60000
+  pollInterval:      60000,
+  // ── Spending alert threshold ─────────────────────────────────
+  // A warning appears in the purchase form when a single receipt exceeds this amount.
+  // Set slightly below your actual credit card review threshold so you have time to act.
+  spendingAlertThreshold: 500   // default; overridden at runtime by localStorage
+  // ────────────────────────────────────────────────────────────
 };
+// Load saved threshold override
+(function() {
+  const saved = localStorage.getItem('meridian_spendingThreshold');
+  if (saved && !isNaN(parseFloat(saved))) CONFIG.spendingAlertThreshold = parseFloat(saved);
+})();
 // ════════════════════════════════════════════════
 
 const SCOPES = ['https://graph.microsoft.com/Sites.ReadWrite.All','https://graph.microsoft.com/Files.ReadWrite.All'];
@@ -680,6 +753,7 @@ async function refreshData() {
         category:         f.Category          || '',
         receiptUrl:       f.ReceiptUrl        || '',
         receiptName:      f.ReceiptName       || '',
+        project:          f.ProjectCode       || '',
         approved:         (f.Approved||'').toLowerCase() === 'yes',
         billed:           (f.Billed||'').toLowerCase()   === 'yes',
         createdAt:        item.createdDateTime || ''
@@ -880,14 +954,16 @@ function renderLog() {
 function logRow(p) {
   const receipt = p.receiptUrl ? `<a class="receipt-link" href="${p.receiptUrl}" target="_blank">📎 View</a>` : `<span style="color:var(--muted);font-size:11px">—</span>`;
   const canEdit = p.submittedByEmail === currentUser.email;
+  const projCell = p.project ? `<span class="proj-badge">${esc(p.project)}</span>` : `<span style="color:var(--muted);font-size:11px">—</span>`;
   return `<tr class="${p.approved?'approved-row':''}">
     <td class="check-cell"><span class="approved-indicator">${p.approved?'✅':'⬜'}</span></td>
     <td style="font-family:monospace;font-size:11px">${esc(p.receiptId)}</td>
     <td>${esc(p.submittedBy)}</td>
     <td>${p.purchaseDate}</td>
-    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.description)}">${esc(p.description)}</td>
+    <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.description)}">${esc(p.description)}</td>
     <td>${esc(p.vendor)}</td>
     <td><span class="cat-badge">${esc(p.category)}</span></td>
+    <td>${projCell}</td>
     <td class="amount-cell">${fmt(p.amount)}</td>
     <td><span class="pill ${billableClass(p.billable)}">${esc(p.billable)}</span></td>
     <td>${receipt}</td>
@@ -1028,6 +1104,15 @@ function renderDash() {
     <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border)">
       <div class="bar-row"><div class="bar-label">Marked as Billed</div><div class="bar-track"><div class="bar-fill" style="width:${count?billedCount/count*100:0}%;background:#3b82f6"></div></div><div class="bar-amt">${billedCount} receipts</div></div>
     </div>`;
+
+  // Billable spend by project
+  const byProj={};
+  purchases.filter(p=>p.billable==='Billable'&&p.project).forEach(p=>{byProj[p.project]=(byProj[p.project]||0)+p.amount;});
+  const projSorted=Object.entries(byProj).sort((a,b)=>b[1]-a[1]);
+  const maxProj=projSorted[0]?.[1]||1;
+  document.getElementById('chart-projects').innerHTML=projSorted.length
+    ?projSorted.map(([proj,amt])=>`<div class="bar-row"><div class="bar-label" title="${esc(proj)}">${esc(proj)}</div><div class="bar-track"><div class="bar-fill" style="width:${amt/maxProj*100}%;background:var(--purple)"></div></div><div class="bar-amt">${fmt(amt)}</div></div>`).join('')
+    :'<div style="color:var(--muted);font-size:13px;padding:8px 0">No billable purchases with project codes yet.</div>';
 }
 
 function empty() { return '<div style="color:var(--muted);font-size:13px;padding:8px 0">No data yet.</div>'; }
@@ -1059,6 +1144,10 @@ function openPurchaseModal() {
   document.getElementById('f-amount').value      = '';
   document.getElementById('f-reason').value      = '';
   document.getElementById('f-category').value    = '';
+  document.getElementById('f-project').value     = '';
+  document.getElementById('amount-alert').classList.remove('show');
+  document.getElementById('project-req').style.display = 'none';
+  document.getElementById('project-hint').textContent  = '(optional)';
   ['toggle-yes','toggle-no','toggle-unsure'].forEach(id=>document.getElementById(id).classList.remove('active'));
   document.getElementById('upload-zone').style.display    = 'block';
   document.getElementById('upload-preview').style.display = 'none';
@@ -1079,9 +1168,14 @@ function openEditModal(itemId) {
   document.getElementById('f-amount').value      = p.amount;
   document.getElementById('f-reason').value      = p.reason;
   document.getElementById('f-category').value    = p.category;
+  document.getElementById('f-project').value     = p.project || '';
+  document.getElementById('amount-alert').classList.remove('show');
   document.getElementById('toggle-yes').classList.toggle('active',   p.billable==='Billable');
   document.getElementById('toggle-no').classList.toggle('active',    p.billable==='Non-billable');
   document.getElementById('toggle-unsure').classList.toggle('active',p.billable==='Unsure');
+  // Project required indicator
+  document.getElementById('project-req').style.display = p.billable==='Billable' ? 'inline' : 'none';
+  document.getElementById('project-hint').textContent  = p.billable==='Billable' ? '(required for billable purchases)' : '(optional)';
   document.getElementById('upload-zone').style.display    = 'block';
   document.getElementById('upload-preview').style.display = 'none';
   if (p.receiptUrl) {
@@ -1103,6 +1197,41 @@ function setBillable(val) {
   document.getElementById('toggle-yes').classList.toggle('active',    val==='Billable');
   document.getElementById('toggle-no').classList.toggle('active',     val==='Non-billable');
   document.getElementById('toggle-unsure').classList.toggle('active', val==='Unsure');
+  // Project field: required when Billable
+  const req  = document.getElementById('project-req');
+  const hint = document.getElementById('project-hint');
+  if (val === 'Billable') {
+    req.style.display  = 'inline';
+    hint.textContent   = '(required for billable purchases)';
+  } else {
+    req.style.display  = 'none';
+    hint.textContent   = '(optional)';
+  }
+}
+
+function checkAmountAlert() {
+  const amt = parseFloat(document.getElementById('f-amount').value) || 0;
+  const el  = document.getElementById('amount-alert');
+  document.getElementById('alert-threshold').textContent = CONFIG.spendingAlertThreshold.toLocaleString();
+  el.classList.toggle('show', amt >= CONFIG.spendingAlertThreshold);
+}
+
+function openSettings() {
+  document.getElementById('settings-threshold').value = CONFIG.spendingAlertThreshold;
+  document.getElementById('settings-modal').style.display = 'flex';
+}
+function closeSettings() {
+  document.getElementById('settings-modal').style.display = 'none';
+}
+function saveSettings() {
+  const val = parseFloat(document.getElementById('settings-threshold').value);
+  if (!val || val <= 0) { alert('Please enter a valid amount greater than $0.'); return; }
+  CONFIG.spendingAlertThreshold = val;
+  localStorage.setItem('meridian_spendingThreshold', val);
+  closeSettings();
+  showToast('Spending alert threshold updated to $' + val.toLocaleString(), 'success');
+  // Re-run alert check if purchase form is open
+  if (document.getElementById('purchase-modal').style.display !== 'none') checkAmountAlert();
 }
 
 // ── File Handling ──────────────────────────────────────────────
@@ -1114,11 +1243,13 @@ function showFilePreview(n){document.getElementById('upload-zone').style.display
 function clearFile()       {selectedFile=null;document.getElementById('f-receipt').value='';document.getElementById('upload-zone').style.display='block';document.getElementById('upload-preview').style.display='none';}
 
 // ── Save Purchase ──────────────────────────────────────────────
-async function savePurchase() {
+let _pendingSaveData = null; // holds form data while duplicate confirm is open
+
+async function savePurchase(skipDupCheck=false) {
   const name=document.getElementById('f-name').value.trim(), date=document.getElementById('f-date').value,
         desc=document.getElementById('f-description').value.trim(), vendor=document.getElementById('f-vendor').value.trim(),
         amount=parseFloat(document.getElementById('f-amount').value), reason=document.getElementById('f-reason').value.trim(),
-        category=document.getElementById('f-category').value;
+        category=document.getElementById('f-category').value, project=document.getElementById('f-project').value.trim();
   if (!name)            return toast('Employee name is required','error');
   if (!date)            return toast('Purchase date is required','error');
   if (!desc)            return toast('Description is required','error');
@@ -1127,6 +1258,24 @@ async function savePurchase() {
   if (!reason)          return toast('Reason is required','error');
   if (!billableValue)   return toast('Select Billable, Non-billable, or Unsure','error');
   if (!category)        return toast('Select a category','error');
+  if (billableValue==='Billable' && !project) return toast('Project / Job Code is required for billable purchases','error');
+
+  // Duplicate detection (skip if user already confirmed)
+  if (!skipDupCheck && !editingItemId) {
+    const dup = purchases.find(p =>
+      p.submittedByEmail === currentUser.email &&
+      p.vendor.toLowerCase()   === vendor.toLowerCase() &&
+      p.purchaseDate           === date &&
+      Math.abs(p.amount - amount) < 0.01
+    );
+    if (dup) {
+      document.getElementById('dup-detail').innerHTML =
+        `A purchase you submitted was already logged for <strong>${esc(vendor)}</strong> on <strong>${date}</strong> for <strong>${fmt(amount)}</strong> — Receipt ID: <span class="dup-id">${esc(dup.receiptId)}</span>.`;
+      _pendingSaveData = true;
+      document.getElementById('dup-modal').classList.add('open');
+      return;
+    }
+  }
 
   const btn=document.getElementById('save-btn'); btn.disabled=true;
   showSaveOverlay(editingItemId?'Updating…':'Saving purchase…');
@@ -1140,7 +1289,7 @@ async function savePurchase() {
       receiptUrl=up.url; receiptName=up.name;
     }
     const receiptId=editingReceiptId||generateReceiptId();
-    const fields={Title:receiptId,EmployeeName:name,SubmittedByEmail:currentUser.email,PurchaseDate:date,Description:desc,Vendor:vendor,Amount:amount,Reason:reason,Billable:billableValue,Category:category,ReceiptUrl:receiptUrl,ReceiptName:receiptName};
+    const fields={Title:receiptId,EmployeeName:name,SubmittedByEmail:currentUser.email,PurchaseDate:date,Description:desc,Vendor:vendor,Amount:amount,Reason:reason,Billable:billableValue,Category:category,ProjectCode:project,ReceiptUrl:receiptUrl,ReceiptName:receiptName};
     if (editingItemId) {
       await graph(`/sites/${siteId}/lists/${encodeURIComponent(CONFIG.purchasesListName)}/items/${editingItemId}`,{method:'PATCH',body:JSON.stringify({fields})});
       toast('Purchase updated!','success');
@@ -1151,6 +1300,12 @@ async function savePurchase() {
     closeModal('purchase-modal'); await refreshData();
   } catch(e){ console.error(e); toast('Error: '+e.message,'error'); }
   finally { btn.disabled=false; hideSaveOverlay(); }
+}
+
+function confirmSaveDuplicate() {
+  closeModal('dup-modal');
+  _pendingSaveData = null;
+  savePurchase(true); // skip dup check this time
 }
 
 async function uploadReceipt(file, fileName) {
@@ -1229,8 +1384,8 @@ function runExport() {
   if (!rows.length) { toast('No data to export','error'); return; }
   const sorted = [...rows].sort((a,b)=>a.purchaseDate.localeCompare(b.purchaseDate));
 
-  const header = ['Receipt ID','Employee','Email','Purchase Date','Description','Vendor','Category','Amount','Billable','Reason','Approved','Billed','Receipt URL'];
-  const data   = sorted.map(p=>[p.receiptId,p.submittedBy,p.submittedByEmail,p.purchaseDate,p.description,p.vendor,p.category,p.amount,p.billable,p.reason,p.approved?'Yes':'No',p.billed?'Yes':'No',p.receiptUrl]);
+  const header = ['Receipt ID','Employee','Email','Purchase Date','Description','Vendor','Category','Project / Job Code','Amount','Billable','Reason','Approved','Billed','Receipt URL'];
+  const data   = sorted.map(p=>[p.receiptId,p.submittedBy,p.submittedByEmail,p.purchaseDate,p.description,p.vendor,p.category,p.project||'',p.amount,p.billable,p.reason,p.approved?'Yes':'No',p.billed?'Yes':'No',p.receiptUrl]);
 
   const ws = XLSX.utils.aoa_to_sheet([header,...data]);
   ws['!cols'] = [14,18,28,13,30,20,25,10,14,40,10,8,40].map(w=>({wch:w}));
