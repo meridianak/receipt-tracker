@@ -671,7 +671,7 @@ async function refreshData() {
         receiptId:        f.Title             || '',
         submittedBy:      f.EmployeeName      || '',
         submittedByEmail: f.SubmittedByEmail  || '',
-        purchaseDate:     f.PurchaseDate      || '',
+        purchaseDate:     (f.PurchaseDate || '').slice(0, 10),
         description:      f.Description       || '',
         vendor:           f.Vendor            || '',
         amount:           parseFloat(f.Amount) || 0,
