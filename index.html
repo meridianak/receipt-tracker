@@ -300,9 +300,25 @@
 <header>
   <div class="logo">
     <div class="logo-icon">M</div>
-    <div><h1>Expense Receipt Tracker</h1><p>Meridian Management</p></div>
+    <div><h1>Meridian Management</h1><p>Receipt Tracker</p></div>
   </div>
   <div class="header-right" style="display:flex;align-items:center;gap:10px;">
+    <div style="position:relative" id="app-switcher-wrap">
+      <button class="user-chip" onclick="toggleAppSwitcher()" title="Switch App" style="padding:8px 12px;gap:6px;">
+        ⊞ Apps
+      </button>
+      <div id="app-switcher-menu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);min-width:220px;z-index:200;overflow:hidden;">
+        <div style="padding:10px 14px 6px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;">Meridian Tools</div>
+        <a href="https://meridianak.github.io/expense-tracker/" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;color:var(--text);text-decoration:none;font-size:14px;font-weight:500;border-top:1px solid var(--border);" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+          <div style="width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--brand);font-size:14px;flex-shrink:0;">M</div>
+          <div><div style="font-weight:600;">Receipt Tracker</div><div style="font-size:11px;color:var(--muted);">Current app</div></div>
+        </a>
+        <a href="https://meridianak.github.io/meridian-checkout/" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;color:var(--text);text-decoration:none;font-size:14px;font-weight:500;border-top:1px solid var(--border);" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+          <div style="width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--brand);font-size:14px;flex-shrink:0;">M</div>
+          <div><div style="font-weight:600;">Device Checkout</div><div style="font-size:11px;color:var(--muted);">Equipment tracking</div></div>
+        </a>
+      </div>
+    </div>
     <button class="user-chip" onclick="openSettings()" title="Settings" style="padding:8px 12px;gap:6px;">
       ⚙ Settings
     </button>
@@ -1215,6 +1231,15 @@ function checkAmountAlert() {
   document.getElementById('alert-threshold').textContent = CONFIG.spendingAlertThreshold.toLocaleString();
   el.classList.toggle('show', amt >= CONFIG.spendingAlertThreshold);
 }
+
+function toggleAppSwitcher() {
+  const menu = document.getElementById('app-switcher-menu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('app-switcher-wrap');
+  if (wrap && !wrap.contains(e.target)) document.getElementById('app-switcher-menu').style.display = 'none';
+});
 
 function openSettings() {
   document.getElementById('settings-threshold').value = CONFIG.spendingAlertThreshold;
