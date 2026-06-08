@@ -495,8 +495,12 @@
         </div>
       </div>
       <div class="form-group full" id="project-group">
-        <label>Project / Job Code <span class="req" id="project-req" style="display:none">*</span> <span id="project-hint" style="color:var(--muted);font-weight:400;font-size:11px">(optional)</span></label>
-        <input type="text" id="f-project" placeholder="e.g. Client Name, Job #, Project Code…">
+        <label>Project Name <span class="req" id="project-req" style="display:none">*</span> <span id="project-hint" style="color:var(--muted);font-weight:400;font-size:11px">(optional)</span></label>
+        <select id="f-project-select" onchange="onProjectSelectChange('f-project-select','f-project-new')">
+          <option value="">— Select project —</option>
+          <option value="__other__">＋ Other (add new project…)</option>
+        </select>
+        <input type="text" id="f-project-new" placeholder="New project name…" autocomplete="off" style="display:none;margin-top:8px;width:100%" />
       </div>
       <div class="form-group full">
         <label>Category <span class="req">*</span></label>
@@ -666,8 +670,9 @@ const CONFIG = {
   clientId:          "ff1fd3ee-7baf-4d72-b978-742a29de8eab",
   tenantId:          "4fa4840a-2a70-49e0-93ab-fd8b099bbeed",
   siteHostname:      "meridianak.sharepoint.com",
-  purchasesListName: "PurchaseRecords",
-  receiptLibrary:    "ReceiptImages",
+  purchasesListName:    "PurchaseRecords",
+  receiptLibrary:       "ReceiptImages",
+  projectNamesListName: "ProjectNames",
   pollInterval:      60000,
   // ── Spending alert threshold ─────────────────────────────────
   // A warning appears in the purchase form when a single receipt exceeds this amount.
@@ -683,7 +688,7 @@ const CONFIG = {
 // ════════════════════════════════════════════════
 
 const SCOPES = ['https://graph.microsoft.com/Sites.ReadWrite.All','https://graph.microsoft.com/Files.ReadWrite.All'];
-let msalInstance=null, siteId=null, purchases=[], currentUser=null, pollTimer=null;
+let msalInstance=null, siteId=null, purchases=[], projectNames=[], currentUser=null, pollTimer=null;
 let selectedFile=null, editingItemId=null, editingReceiptId=null;
 let sortField='purchaseDate', sortDir='desc', billableValue='';
 
@@ -746,11 +751,49 @@ async function startApp() {
     const site = await graph(`/sites/${CONFIG.siteHostname}`);
     siteId = site.id;
     showLoading('Loading purchases…');
+    await loadProjectNames();
     await refreshData();
     hideScreens();
     showTab('home');
     pollTimer = setInterval(refreshData, CONFIG.pollInterval);
   } catch(e) { console.error(e); showLoading('⚠ Error: ' + e.message); }
+}
+
+// ── Project Names (shared list) ───────────────────────────────
+async function loadProjectNames() {
+  try {
+    const res = await graph(`/sites/${siteId}/lists/${encodeURIComponent(CONFIG.projectNamesListName)}/items?$expand=fields&$top=500`);
+    projectNames = (res.value || [])
+      .map(item => item.fields.Title || '')
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+    populateProjectNameDropdown();
+  } catch (e) { console.warn('Could not load project names', e); }
+}
+
+function populateProjectNameDropdown() {
+  const sel = document.getElementById('f-project-select');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML =
+    '<option value="">— Select project —</option>' +
+    projectNames.map(n => `<option value="${esc(n)}"${n === cur ? ' selected' : ''}>${esc(n)}</option>`).join('') +
+    `<option value="__other__"${cur === '__other__' ? ' selected' : ''}>＋ Other (add new project…)</option>`;
+}
+
+async function addNewProjectName(name) {
+  try {
+    await graph(`/sites/${siteId}/lists/${encodeURIComponent(CONFIG.projectNamesListName)}/items`,
+      { method: 'POST', body: JSON.stringify({ fields: { Title: name } }) });
+    await loadProjectNames();
+  } catch (e) { console.warn('Could not save new project name', e); }
+}
+
+function onProjectSelectChange(selectId, inputId) {
+  const sel = document.getElementById(selectId);
+  const inp = document.getElementById(inputId);
+  inp.style.display = sel.value === '__other__' ? 'block' : 'none';
+  if (sel.value === '__other__') setTimeout(() => inp.focus(), 60);
 }
 
 // ── Data ──────────────────────────────────────────────────────
@@ -1164,7 +1207,10 @@ function openPurchaseModal() {
   document.getElementById('f-amount').value      = '';
   document.getElementById('f-reason').value      = '';
   document.getElementById('f-category').value    = '';
-  document.getElementById('f-project').value     = '';
+  populateProjectNameDropdown();
+  document.getElementById('f-project-select').value   = '';
+  document.getElementById('f-project-new').value      = '';
+  document.getElementById('f-project-new').style.display = 'none';
   document.getElementById('amount-alert').classList.remove('show');
   document.getElementById('project-req').style.display = 'none';
   document.getElementById('project-hint').textContent  = '(optional)';
@@ -1188,7 +1234,17 @@ function openEditModal(itemId) {
   document.getElementById('f-amount').value      = p.amount;
   document.getElementById('f-reason').value      = p.reason;
   document.getElementById('f-category').value    = p.category;
-  document.getElementById('f-project').value     = p.project || '';
+  // Restore project — match to list or fall back to Other
+  populateProjectNameDropdown();
+  const rtProjSel = document.getElementById('f-project-select');
+  const rtProjNew = document.getElementById('f-project-new');
+  if (p.project && projectNames.includes(p.project)) {
+    rtProjSel.value = p.project; rtProjNew.style.display = 'none';
+  } else if (p.project) {
+    rtProjSel.value = '__other__'; rtProjNew.value = p.project; rtProjNew.style.display = 'block';
+  } else {
+    rtProjSel.value = ''; rtProjNew.value = ''; rtProjNew.style.display = 'none';
+  }
   document.getElementById('amount-alert').classList.remove('show');
   document.getElementById('toggle-yes').classList.toggle('active',   p.billable==='Billable');
   document.getElementById('toggle-no').classList.toggle('active',    p.billable==='Non-billable');
@@ -1278,7 +1334,11 @@ async function savePurchase(skipDupCheck=false) {
   const name=document.getElementById('f-name').value.trim(), date=document.getElementById('f-date').value,
         desc=document.getElementById('f-description').value.trim(), vendor=document.getElementById('f-vendor').value.trim(),
         amount=parseFloat(document.getElementById('f-amount').value), reason=document.getElementById('f-reason').value.trim(),
-        category=document.getElementById('f-category').value, project=document.getElementById('f-project').value.trim();
+        category=document.getElementById('f-category').value;
+  const rtProjSelVal = document.getElementById('f-project-select').value;
+  const project = rtProjSelVal === '__other__'
+    ? document.getElementById('f-project-new').value.trim()
+    : rtProjSelVal;
   if (!name)            return toast('Employee name is required','error');
   if (!date)            return toast('Purchase date is required','error');
   if (!desc)            return toast('Description is required','error');
@@ -1287,7 +1347,10 @@ async function savePurchase(skipDupCheck=false) {
   if (!reason)          return toast('Reason is required','error');
   if (!billableValue)   return toast('Select Billable, Non-billable, or Unsure','error');
   if (!category)        return toast('Select a category','error');
-  if (billableValue==='Billable' && !project) return toast('Project / Job Code is required for billable purchases','error');
+  if (billableValue==='Billable' && !project) {
+    document.getElementById(rtProjSelVal === '__other__' ? 'f-project-new' : 'f-project-select').focus();
+    return toast('Project Name is required for billable purchases','error');
+  }
 
   // Duplicate detection (skip if user already confirmed)
   if (!skipDupCheck && !editingItemId) {
@@ -1326,6 +1389,7 @@ async function savePurchase(skipDupCheck=false) {
       await graph(`/sites/${siteId}/lists/${encodeURIComponent(CONFIG.purchasesListName)}/items`,{method:'POST',body:JSON.stringify({fields})});
       toast('Logged! Receipt ID: '+receiptId,'success');
     }
+    if (rtProjSelVal === '__other__' && project) await addNewProjectName(project);
     closeModal('purchase-modal'); await refreshData();
   } catch(e){ console.error(e); toast('Error: '+e.message,'error'); }
   finally { btn.disabled=false; hideSaveOverlay(); }
