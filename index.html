@@ -559,6 +559,30 @@
   </div>
 </div>
 
+<!-- ══════════ NO RECEIPT WARNING ══════════ -->
+<div class="modal-overlay" id="no-receipt-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h3>No Receipt Attached</h3>
+      <button class="modal-close" onclick="closeModal('no-receipt-modal')">✕</button>
+    </div>
+    <div class="dup-warning">
+      <h4>⚠ You haven't attached a receipt</h4>
+      <p>Receipts are required for expense reimbursement and audit purposes.</p>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+      If you don't have the receipt right now, please make sure your <strong>Reason for Purchase</strong> provides full detail — including what was purchased, from whom, the business purpose, and any other relevant context.
+    </p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">
+      You can also edit this entry later to attach the receipt once you have it.
+    </p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('no-receipt-modal')">Go Back &amp; Add Receipt</button>
+      <button class="btn-confirm" onclick="confirmSaveNoReceipt()">Save Without Receipt</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════ EXPORT MODAL ══════════ -->
 <div class="modal-overlay" id="export-modal">
   <div class="modal">
@@ -1330,7 +1354,7 @@ function clearFile()       {selectedFile=null;document.getElementById('f-receipt
 // ── Save Purchase ──────────────────────────────────────────────
 let _pendingSaveData = null; // holds form data while duplicate confirm is open
 
-async function savePurchase(skipDupCheck=false) {
+async function savePurchase(skipDupCheck=false, skipReceiptCheck=false) {
   const name=document.getElementById('f-name').value.trim(), date=document.getElementById('f-date').value,
         desc=document.getElementById('f-description').value.trim(), vendor=document.getElementById('f-vendor').value.trim(),
         amount=parseFloat(document.getElementById('f-amount').value), reason=document.getElementById('f-reason').value.trim(),
@@ -1350,6 +1374,15 @@ async function savePurchase(skipDupCheck=false) {
   if (billableValue==='Billable' && !project) {
     document.getElementById(rtProjSelVal === '__other__' ? 'f-project-new' : 'f-project-select').focus();
     return toast('Project Name is required for billable purchases','error');
+  }
+
+  // No-receipt warning (skip if user already confirmed)
+  if (!skipReceiptCheck) {
+    const existingUrl = editingItemId ? (purchases.find(p => p.itemId === editingItemId)?.receiptUrl || '') : '';
+    if (!selectedFile && !existingUrl) {
+      document.getElementById('no-receipt-modal').classList.add('open');
+      return;
+    }
   }
 
   // Duplicate detection (skip if user already confirmed)
@@ -1398,7 +1431,12 @@ async function savePurchase(skipDupCheck=false) {
 function confirmSaveDuplicate() {
   closeModal('dup-modal');
   _pendingSaveData = null;
-  savePurchase(true); // skip dup check this time
+  savePurchase(true, true);
+}
+
+function confirmSaveNoReceipt() {
+  closeModal('no-receipt-modal');
+  savePurchase(false, true); // skip receipt check, still run dup check
 }
 
 async function uploadReceipt(file, fileName) {
