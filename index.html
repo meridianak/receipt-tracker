@@ -69,8 +69,8 @@
     .hero { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-light) 100%); border-radius: 16px; padding: 36px 40px; color: #fff; margin-bottom: 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
     .hero-left h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
     .hero-left p  { font-size: 14px; opacity: .75; }
-    .btn-log-purchase { background: var(--brand); color: #fff; border: 2px solid rgba(255,255,255,.4); border-radius: 10px; padding: 13px 30px; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.25); transition: all .15s; white-space: nowrap; flex-shrink: 0; }
-    .btn-log-purchase:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.35); background: rgba(255,255,255,.1); }
+    .btn-log-purchase { background: var(--accent); color: var(--brand); border: none; border-radius: 10px; padding: 13px 30px; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 16px rgba(232,160,32,.4); transition: all .15s; white-space: nowrap; flex-shrink: 0; }
+    .btn-log-purchase:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(232,160,32,.5); }
 
     /* ── Apps switcher ── */
     .apps-btn { background: rgba(255,255,255,.12); border: none; border-radius: 8px; color: #fff; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; transition: background .15s; display: flex; align-items: center; gap: 6px; }
@@ -112,12 +112,25 @@
     .section-header a { font-size: 12px; color: var(--brand-light); font-weight: 600; text-decoration: none; cursor: pointer; }
     .section-header a:hover { text-decoration: underline; }
 
-    /* ── Toolbar ── */
+    /* ── Toolbar / Filter bar ── */
     .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
     .toolbar input, .toolbar select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; color: var(--text); background: var(--surface); outline: none; }
     .toolbar input { min-width: 200px; }
     .toolbar input:focus, .toolbar select:focus { border-color: var(--brand-light); }
     .toolbar-spacer { flex: 1; }
+    .filter-bar { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 18px; margin-bottom: 12px; }
+    .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .filter-row:last-child { margin-bottom: 0; }
+    .filter-bar input, .filter-bar select { padding: 7px 11px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; color: var(--text); background: var(--surface); outline: none; height: 34px; }
+    .filter-bar input:focus, .filter-bar select:focus { border-color: var(--brand-light); }
+    .filter-bar input[type="text"]  { min-width: 220px; flex: 1; }
+    .filter-bar input[type="month"] { width: 148px; }
+    .filter-sep { color: var(--border); font-size: 20px; user-select: none; margin: 0 2px; }
+    .filter-group-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); white-space: nowrap; }
+    .log-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+    .log-meta { font-size: 13px; color: var(--muted); }
+    .btn-export { display: flex; align-items: center; gap: 7px; background: var(--accent); color: var(--brand); border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; }
+    .btn-export:hover { background: #d4901a; }
     .btn-green  { background: var(--green); color: #fff; padding: 8px 16px; border: none; border-radius: 7px; font-weight: 700; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
     .btn-green:hover  { background: #16a34a; }
     .btn-accent { background: var(--accent); color: var(--brand); padding: 8px 16px; border: none; border-radius: 7px; font-weight: 700; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
@@ -286,7 +299,7 @@
 <div class="screen" id="signin-screen" style="display:none">
   <div class="screen-logo">M</div>
   <h2>Meridian Expense Tracker</h2>
-  <p>Log and track company credit card purchases. Sign in with your Meridian Microsoft account.</p>
+  <p>Log and track company credit card receipts. Sign in with your Meridian Microsoft account.</p>
   <button class="ms-btn" onclick="signIn()">
     <svg width="20" height="20" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
     Sign in with Microsoft
@@ -374,7 +387,7 @@
 <!-- Nav -->
 <nav>
   <button id="nav-home" class="active" onclick="showTab('home')">🏠 My Expenses</button>
-  <button id="nav-log"  onclick="showTab('log')">📋 All Purchases <span id="unapproved-badge"></span></button>
+  <button id="nav-log"  onclick="showTab('log')">📋 Receipt Log <span id="unapproved-badge"></span></button>
   <button id="nav-projects" onclick="showTab('projects')">📁 Projects</button>
 </nav>
 
@@ -384,13 +397,13 @@
     <div class="hero">
       <div class="hero-left">
         <h2 id="hero-greeting">Welcome back!</h2>
-        <p id="hero-sub">Log your company credit card purchases and keep receipts organized.</p>
+        <p id="hero-sub">Log company credit card receipts. Submissions are stored in SharePoint and visible to your team.</p>
       </div>
-      <button class="btn-log-purchase" onclick="openPurchaseModal()">+ Log a Purchase</button>
+      <button class="btn-log-purchase" onclick="openPurchaseModal()">+ Log a Receipt</button>
     </div>
     <div class="section-header">
-      <h2>My Recent Purchases</h2>
-      <a onclick="showTab('log')">View all purchases →</a>
+      <h2>My Recent Receipts</h2>
+      <a onclick="showTab('log')">View all receipts →</a>
     </div>
     <div class="table-wrap">
       <table>
@@ -404,7 +417,7 @@
   </main>
 </div>
 
-<!-- ══════════ ALL PURCHASES TAB ══════════ -->
+<!-- ══════════ RECEIPT LOG TAB ══════════ -->
 <div id="tab-log" style="display:none">
   <main>
     <!-- Unapproved banner -->
@@ -415,28 +428,38 @@
       <a class="ub-filter" onclick="filterUnapproved()">Show unapproved only →</a>
     </div>
 
-    <!-- Filters -->
-    <div class="toolbar">
-      <input type="text" id="search-input" placeholder="🔍 Search name, description, vendor…" oninput="renderLog()">
-      <select id="filter-cat"      onchange="renderLog()"><option value="">All Categories</option></select>
-      <select id="filter-billable" onchange="renderLog()">
-        <option value="">All Billable Types</option>
-        <option value="Billable">Billable</option>
-        <option value="Non-billable">Non-billable</option>
-        <option value="Unsure">Unsure</option>
-      </select>
-      <select id="filter-person"   onchange="renderLog()"><option value="">All Employees</option></select>
-      <input  type="month" id="filter-month" onchange="renderLog()" title="Filter by month">
-      <select id="filter-approved" onchange="renderLog()">
-        <option value="">All Approval Status</option>
-        <option value="no">Unapproved Only</option>
-        <option value="yes">Approved Only</option>
-      </select>
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <div class="filter-row">
+        <input type="text" id="search-input" placeholder="🔍  Search name, description, vendor…" oninput="renderLog()">
+        <span class="filter-sep">|</span>
+        <span class="filter-group-label">Month</span>
+        <input type="month" id="filter-month" onchange="renderLog()" title="Filter by month">
+      </div>
+      <div class="filter-row">
+        <select id="filter-person"   onchange="renderLog()" style="min-width:160px;"><option value="">All Employees</option></select>
+        <select id="filter-cat"      onchange="renderLog()"><option value="">All Categories</option></select>
+        <select id="filter-billable" onchange="renderLog()">
+          <option value="">All Billing</option>
+          <option value="Billable">Billable</option>
+          <option value="Non-billable">Non-billable</option>
+          <option value="Unsure">Unsure</option>
+        </select>
+        <select id="filter-approved" onchange="renderLog()">
+          <option value="">All Approval Status</option>
+          <option value="no">Unapproved Only</option>
+          <option value="yes">Approved Only</option>
+        </select>
+      </div>
     </div>
-    <div id="log-count" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
 
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-      <button class="btn-accent" onclick="openExportModal()">⬇ Export Excel</button>
+    <!-- Actions bar -->
+    <div class="log-actions">
+      <div id="log-count" class="log-meta"></div>
+      <button class="btn-export" onclick="openExportModal()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export Excel
+      </button>
     </div>
 
     <div class="table-wrap">
@@ -474,21 +497,21 @@
 <div class="modal-overlay" id="purchase-modal">
   <div class="modal wide">
     <div class="modal-header">
-      <h3 id="modal-title">Log a Purchase</h3>
+      <h3 id="modal-title">Log a Receipt</h3>
       <button class="modal-close" onclick="closeModal('purchase-modal')">✕</button>
     </div>
     <div class="modal-sub" id="modal-receipt-id"></div>
     <div class="form-grid">
       <div class="form-group"><label>Employee Name <span class="req">*</span></label><input type="text" id="f-name" placeholder="Full name"></div>
-      <div class="form-group"><label>Purchase Date <span class="req">*</span></label><input type="date" id="f-date"></div>
+      <div class="form-group"><label>Receipt Date <span class="req">*</span></label><input type="date" id="f-date"></div>
       <div class="form-group full"><label>What was purchased? <span class="req">*</span></label><input type="text" id="f-description" placeholder="Brief description"></div>
       <div class="form-group"><label>Vendor / Store <span class="req">*</span></label><input type="text" id="f-vendor" placeholder="Where was the purchase made?"></div>
       <div class="form-group">
-        <label>Purchase Amount ($) <span class="req">*</span></label>
+        <label>Amount ($) <span class="req">*</span></label>
         <input type="number" id="f-amount" placeholder="0.00" step="0.01" min="0" oninput="checkAmountAlert()">
-        <div class="amount-alert" id="amount-alert">⚠ This purchase exceeds the $<span id="alert-threshold"></span> alert threshold — flag for review.</div>
+        <div class="amount-alert" id="amount-alert">⚠ This receipt exceeds the $<span id="alert-threshold"></span> alert threshold — flag for review.</div>
       </div>
-      <div class="form-group full"><label>Reason for Purchase <span class="req">*</span></label><textarea id="f-reason" placeholder="Explain why this purchase was necessary…"></textarea></div>
+      <div class="form-group full"><label>Business Purpose <span class="req">*</span></label><textarea id="f-reason" placeholder="Explain why this purchase was necessary…"></textarea></div>
       <div class="form-group full">
         <label>Billable Classification <span class="req">*</span></label>
         <div class="billable-toggle">
@@ -536,7 +559,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('purchase-modal')">Cancel</button>
-      <button class="btn-confirm" id="save-btn" onclick="savePurchase()">Save Purchase</button>
+      <button class="btn-confirm" id="save-btn" onclick="savePurchase()">💾 Submit Receipt</button>
     </div>
   </div>
 </div>
@@ -549,10 +572,10 @@
       <button class="modal-close" onclick="closeModal('dup-modal')">✕</button>
     </div>
     <div class="dup-warning">
-      <h4>⚠ Similar purchase already exists</h4>
-      <p id="dup-detail">A purchase with the same vendor, amount, and date was already logged.</p>
+      <h4>⚠ Similar receipt already exists</h4>
+      <p id="dup-detail">A receipt with the same vendor, amount, and date was already logged.</p>
     </div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">If this is a legitimate separate purchase, click <strong>Save Anyway</strong>. If it's a duplicate, click Cancel and delete the extra entry.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">If this is a legitimate separate receipt, click <strong>Save Anyway</strong>. If it's a duplicate, click Cancel and delete the extra entry.</p>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('dup-modal')">Cancel</button>
       <button class="btn-confirm" onclick="confirmSaveDuplicate()">Save Anyway</button>
@@ -572,7 +595,7 @@
       <p>Receipts are required for expense reimbursement and audit purposes.</p>
     </div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
-      If you don't have the receipt right now, please make sure your <strong>Reason for Purchase</strong> provides full detail — including what was purchased, from whom, the business purpose, and any other relevant context.
+      If you don't have the receipt right now, please make sure your <strong>Business Purpose</strong> provides full detail — including what was purchased, from whom, the business purpose, and any other relevant context.
     </p>
     <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">
       You can also edit this entry later to attach the receipt once you have it.
@@ -621,10 +644,10 @@
           <select id="ef-person"><option value="">All employees</option></select>
         </div>
         <div class="fg">
-          <label>My purchases only</label>
+          <label>My receipts only</label>
           <select id="ef-mine">
             <option value="">No</option>
-            <option value="yes">Yes — only my purchases</option>
+            <option value="yes">Yes — only my receipts</option>
           </select>
         </div>
       </div>
@@ -795,7 +818,7 @@ async function startApp() {
   try {
     const site = await graph(`/sites/${CONFIG.siteHostname}`);
     siteId = site.id;
-    showLoading('Loading purchases…');
+    showLoading('Loading receipts…');
     await loadProjectNames();
     await refreshData();
     hideScreens();
@@ -941,7 +964,7 @@ function renderHome() {
   const tbody = document.getElementById('my-purchases-body');
   tbody.innerHTML = recent.length
     ? recent.map(p => homeRow(p)).join('')
-    : `<tr><td colspan="6" class="empty-state"><div class="ei">🧾</div>No purchases yet. Click "+ Log a Purchase" to get started.</td></tr>`;
+    : `<tr><td colspan="6" class="empty-state"><div class="ei">🧾</div>No receipts yet. Click "+ Log a Receipt" to get started.</td></tr>`;
 }
 
 
@@ -989,12 +1012,12 @@ function renderLog() {
 
   const total = filtered.reduce((s,p)=>s+p.amount,0);
   document.getElementById('log-count').innerHTML =
-    `Showing <strong>${filtered.length}</strong> of ${purchases.length} purchases &nbsp;·&nbsp; Total: <strong style="color:#16a34a">${fmt(total)}</strong>`;
+    `Showing <strong>${filtered.length}</strong> of ${purchases.length} receipts &nbsp;·&nbsp; Total: <strong style="color:#16a34a">${fmt(total)}</strong>`;
 
   const tbody = document.getElementById('log-body');
   tbody.innerHTML = filtered.length
     ? filtered.map(p => logRow(p)).join('')
-    : `<tr><td colspan="13" class="empty-state"><div class="ei">🔍</div>No purchases match your filters.</td></tr>`;
+    : `<tr><td colspan="13" class="empty-state"><div class="ei">🔍</div>No receipts match your filters.</td></tr>`;
 }
 
 function logRow(p) {
@@ -1181,7 +1204,7 @@ function populateFilters() {
 // ── Purchase Modal ─────────────────────────────────────────────
 function openPurchaseModal() {
   editingItemId=null; editingReceiptId=null; selectedFile=null; billableValue='';
-  document.getElementById('modal-title').textContent      = 'Log a Purchase';
+  document.getElementById('modal-title').textContent      = 'Log a Receipt';
   document.getElementById('modal-receipt-id').textContent = 'Receipt ID will be assigned automatically';
   document.getElementById('f-name').value        = currentUser.name;
   document.getElementById('f-date').value        = new Date().toISOString().split('T')[0];
@@ -1199,14 +1222,14 @@ function openPurchaseModal() {
   document.getElementById('upload-zone').style.display    = 'block';
   document.getElementById('upload-preview').style.display = 'none';
   document.getElementById('existing-receipt-wrap').style.display = 'none';
-  document.getElementById('save-btn').textContent = 'Save Purchase';
+  document.getElementById('save-btn').textContent = '💾 Submit Receipt';
   document.getElementById('purchase-modal').classList.add('open');
 }
 
 function openEditModal(itemId) {
   const p=purchases.find(x=>x.itemId===itemId); if(!p) return;
   editingItemId=itemId; editingReceiptId=p.receiptId; selectedFile=null; billableValue=p.billable;
-  document.getElementById('modal-title').textContent      = 'Edit Purchase';
+  document.getElementById('modal-title').textContent      = 'Edit Receipt';
   document.getElementById('modal-receipt-id').textContent = `Receipt ID: ${p.receiptId}`;
   document.getElementById('f-name').value        = p.submittedBy;
   document.getElementById('f-date').value        = p.purchaseDate;
@@ -1233,7 +1256,7 @@ function openEditModal(itemId) {
     document.getElementById('existing-receipt-link').href        = p.receiptUrl;
     document.getElementById('existing-receipt-link').textContent = p.receiptName||'receipt';
   } else { document.getElementById('existing-receipt-wrap').style.display = 'none'; }
-  document.getElementById('save-btn').textContent = 'Update Purchase';
+  document.getElementById('save-btn').textContent = '✓ Update Receipt';
   document.getElementById('purchase-modal').classList.add('open');
 }
 
@@ -1343,7 +1366,7 @@ async function savePurchase(skipDupCheck=false, skipReceiptCheck=false) {
     );
     if (dup) {
       document.getElementById('dup-detail').innerHTML =
-        `A purchase you submitted was already logged for <strong>${esc(vendor)}</strong> on <strong>${date}</strong> for <strong>${fmt(amount)}</strong> — Receipt ID: <span class="dup-id">${esc(dup.receiptId)}</span>.`;
+        `A receipt you submitted was already logged for <strong>${esc(vendor)}</strong> on <strong>${date}</strong> for <strong>${fmt(amount)}</strong> — Receipt ID: <span class="dup-id">${esc(dup.receiptId)}</span>.`;
       _pendingSaveData = true;
       document.getElementById('dup-modal').classList.add('open');
       return;
@@ -1351,7 +1374,7 @@ async function savePurchase(skipDupCheck=false, skipReceiptCheck=false) {
   }
 
   const btn=document.getElementById('save-btn'); btn.disabled=true;
-  showSaveOverlay(editingItemId?'Updating…':'Saving purchase…');
+  showSaveOverlay(editingItemId?'Updating…':'Saving receipt…');
   try {
     let receiptUrl  = editingItemId?(purchases.find(p=>p.itemId===editingItemId)?.receiptUrl||''):'';
     let receiptName = editingItemId?(purchases.find(p=>p.itemId===editingItemId)?.receiptName||''):'';
@@ -1365,7 +1388,7 @@ async function savePurchase(skipDupCheck=false, skipReceiptCheck=false) {
     const fields={Title:receiptId,EmployeeName:name,SubmittedByEmail:currentUser.email,PurchaseDate:date,Description:desc,Vendor:vendor,Amount:amount,Reason:reason,Billable:billableValue,Category:category,ProjectCode:project,ReceiptUrl:receiptUrl,ReceiptName:receiptName};
     if (editingItemId) {
       await graph(`/sites/${siteId}/lists/${encodeURIComponent(CONFIG.purchasesListName)}/items/${editingItemId}`,{method:'PATCH',body:JSON.stringify({fields})});
-      toast('Purchase updated!','success');
+      toast('Receipt updated!','success');
     } else {
       await graph(`/sites/${siteId}/lists/${encodeURIComponent(CONFIG.purchasesListName)}/items`,{method:'POST',body:JSON.stringify({fields})});
       toast('Logged! Receipt ID: '+receiptId,'success');
@@ -1453,8 +1476,8 @@ function updateExportPreview() {
   const rows = getExportRows();
   const total = rows.reduce((s,p)=>s+p.amount,0);
   document.getElementById('export-preview-count').innerHTML = rows.length
-    ? `<strong>${rows.length}</strong> purchases match your filters &nbsp;·&nbsp; Total: <strong style="color:#16a34a">${fmt(total)}</strong>`
-    : '<span style="color:var(--red)">No purchases match the current filters.</span>';
+    ? `<strong>${rows.length}</strong> receipts match your filters &nbsp;·&nbsp; Total: <strong style="color:#16a34a">${fmt(total)}</strong>`
+    : '<span style="color:var(--red)">No receipts match the current filters.</span>';
 }
 
 function runExport() {
@@ -1462,7 +1485,7 @@ function runExport() {
   if (!rows.length) { toast('No data to export','error'); return; }
   const sorted = [...rows].sort((a,b)=>a.purchaseDate.localeCompare(b.purchaseDate));
 
-  const header = ['Receipt ID','Employee','Email','Purchase Date','Description','Vendor','Category','Project / Job Code','Amount','Billable','Reason','Approved','Billed','Receipt URL'];
+  const header = ['Receipt ID','Employee','Email','Receipt Date','Description','Vendor','Category','Project / Job Code','Amount','Billable','Business Purpose','Approved','Billed','Receipt URL'];
   const data   = sorted.map(p=>[p.receiptId,p.submittedBy,p.submittedByEmail,p.purchaseDate,p.description,p.vendor,p.category,p.project||'',p.amount,p.billable,p.reason,p.approved?'Yes':'No',p.billed?'Yes':'No',p.receiptUrl]);
 
   const ws = XLSX.utils.aoa_to_sheet([header,...data]);
@@ -1494,12 +1517,12 @@ function runExport() {
   ws2['!cols'] = [{wch:28},{wch:16}];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws,  'Purchases');
+  XLSX.utils.book_append_sheet(wb, ws,  'Receipts');
   XLSX.utils.book_append_sheet(wb, ws2, 'Summary');
 
   // Build filename from active filters
   const parts = [];
-  if (document.getElementById('ef-mine').value==='yes') parts.push('my-purchases');
+  if (document.getElementById('ef-mine').value==='yes') parts.push('my-receipts');
   else if (document.getElementById('ef-person').value) parts.push(document.getElementById('ef-person').value.replace(/\s+/g,'-'));
   if (document.getElementById('ef-month').value) parts.push(document.getElementById('ef-month').value);
   else {
@@ -1509,7 +1532,7 @@ function runExport() {
   if (document.getElementById('ef-cat').value) parts.push(document.getElementById('ef-cat').value.replace(/[\s\/&]+/g,'-').toLowerCase());
   const label = parts.length ? '-' + parts.join('-') : '';
   XLSX.writeFile(wb, `meridian-expenses${label}-${new Date().toISOString().slice(0,10)}.xlsx`);
-  toast(`Exported ${rows.length} purchases`, 'success');
+  toast(`Exported ${rows.length} receipts`, 'success');
   closeModal('export-modal');
 }
 
