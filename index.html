@@ -69,8 +69,19 @@
     .hero { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-light) 100%); border-radius: 16px; padding: 36px 40px; color: #fff; margin-bottom: 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
     .hero-left h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
     .hero-left p  { font-size: 14px; opacity: .75; }
-    .btn-log-purchase { background: var(--accent); color: var(--brand); border: none; border-radius: 10px; padding: 13px 30px; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 16px rgba(232,160,32,.4); transition: all .15s; white-space: nowrap; flex-shrink: 0; }
-    .btn-log-purchase:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(232,160,32,.5); }
+    .btn-log-purchase { background: var(--brand); color: #fff; border: 2px solid rgba(255,255,255,.4); border-radius: 10px; padding: 13px 30px; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.25); transition: all .15s; white-space: nowrap; flex-shrink: 0; }
+    .btn-log-purchase:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.35); background: rgba(255,255,255,.1); }
+
+    /* ── Apps switcher ── */
+    .apps-btn { background: rgba(255,255,255,.12); border: none; border-radius: 8px; color: #fff; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; transition: background .15s; display: flex; align-items: center; gap: 6px; }
+    .apps-btn:hover { background: rgba(255,255,255,.22); }
+    .apps-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: var(--surface); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.18); border: 1px solid var(--border); min-width: 240px; padding: 8px; z-index: 300; }
+    .app-entry { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; cursor: pointer; text-decoration: none; color: var(--text); transition: background .12s; }
+    .app-entry:hover { background: var(--bg); }
+    .app-entry-icon { width: 36px; height: 36px; background: #e8a020; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; color: #1a3a5c; flex-shrink: 0; }
+    .app-entry-name { font-size: 13px; font-weight: 700; line-height: 1.2; }
+    .app-entry-sub  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .app-entry-sub.current { color: var(--accent); font-weight: 700; }
 
     /* ── Stat cards ── */
     .summary-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 28px; }
@@ -303,23 +314,29 @@
     <div><h1>Meridian Management</h1><p>Receipt Tracker</p></div>
   </div>
   <div class="header-right" style="display:flex;align-items:center;gap:10px;">
-    <div style="position:relative" id="app-switcher-wrap">
-      <button class="user-chip" onclick="toggleAppSwitcher()" title="Switch App" style="padding:8px 12px;gap:6px;">
-        ⊞ Apps
-      </button>
-      <div id="app-switcher-menu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);min-width:220px;z-index:200;overflow:hidden;">
-        <div style="padding:10px 14px 6px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;">Meridian Tools</div>
-        <a href="https://meridianak.github.io/expense-tracker/" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;color:var(--text);text-decoration:none;font-size:14px;font-weight:500;border-top:1px solid var(--border);" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
-          <div style="width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--brand);font-size:14px;flex-shrink:0;">M</div>
-          <div><div style="font-weight:600;">Receipt Tracker</div><div style="font-size:11px;color:var(--muted);">Current app</div></div>
+    <div style="position:relative" id="apps-menu-wrap">
+      <button class="apps-btn" onclick="toggleAppsMenu(event)" title="Switch app">⊞ Apps</button>
+      <div class="apps-dropdown" id="apps-dropdown" style="display:none">
+        <a class="app-entry" href="https://meridianak.github.io/receipt-tracker/" target="_blank" rel="noopener">
+          <div class="app-entry-icon">M</div>
+          <div>
+            <div class="app-entry-name">Receipt Tracker</div>
+            <div class="app-entry-sub current">Current app</div>
+          </div>
         </a>
-        <a href="https://meridianak.github.io/expense-tracker/" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;color:var(--text);text-decoration:none;font-size:14px;font-weight:500;border-top:1px solid var(--border);" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
-          <div style="width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--brand);font-size:14px;flex-shrink:0;">M</div>
-          <div><div style="font-weight:600;">Expense Tracker</div><div style="font-size:11px;color:var(--muted);">Expense reporting</div></div>
+        <a class="app-entry" href="https://meridianak.github.io/expense-tracker/" target="_blank" rel="noopener">
+          <div class="app-entry-icon">M</div>
+          <div>
+            <div class="app-entry-name">Expense Tracker</div>
+            <div class="app-entry-sub">Expense reporting</div>
+          </div>
         </a>
-        <a href="https://meridianak.github.io/meridian-checkout/" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;color:var(--text);text-decoration:none;font-size:14px;font-weight:500;border-top:1px solid var(--border);" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
-          <div style="width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--brand);font-size:14px;flex-shrink:0;">M</div>
-          <div><div style="font-weight:600;">Device Checkout</div><div style="font-size:11px;color:var(--muted);">Equipment tracking</div></div>
+        <a class="app-entry" href="https://meridianak.github.io/meridian-checkout/" target="_blank" rel="noopener">
+          <div class="app-entry-icon">M</div>
+          <div>
+            <div class="app-entry-name">Device Checkout</div>
+            <div class="app-entry-sub">Track equipment loans</div>
+          </div>
         </a>
       </div>
     </div>
@@ -1249,13 +1266,14 @@ function checkAmountAlert() {
   el.classList.toggle('show', amt >= CONFIG.spendingAlertThreshold);
 }
 
-function toggleAppSwitcher() {
-  const menu = document.getElementById('app-switcher-menu');
-  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+function toggleAppsMenu(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('apps-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
 }
-document.addEventListener('click', function(e) {
-  const wrap = document.getElementById('app-switcher-wrap');
-  if (wrap && !wrap.contains(e.target)) document.getElementById('app-switcher-menu').style.display = 'none';
+document.addEventListener('click', () => {
+  const dd = document.getElementById('apps-dropdown');
+  if (dd) dd.style.display = 'none';
 });
 
 function openSettings() {
