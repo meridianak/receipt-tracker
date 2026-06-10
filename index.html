@@ -358,7 +358,7 @@
 <nav>
   <button id="nav-home" class="active" onclick="showTab('home')">🏠 My Expenses</button>
   <button id="nav-log"  onclick="showTab('log')">📋 All Purchases <span id="unapproved-badge"></span></button>
-  <button id="nav-dash" onclick="showTab('dash')">📊 Dashboard</button>
+  <button id="nav-projects" onclick="showTab('projects')">📁 Projects</button>
 </nav>
 
 <!-- ══════════ HOME TAB ══════════ -->
@@ -367,21 +367,19 @@
     <div class="hero">
       <div class="hero-left">
         <h2 id="hero-greeting">Welcome back!</h2>
-        <p id="hero-sub">Track your company credit card purchases and keep receipts organized.</p>
+        <p id="hero-sub">Log your company credit card purchases and keep receipts organized.</p>
       </div>
       <button class="btn-log-purchase" onclick="openPurchaseModal()">+ Log a Purchase</button>
     </div>
-    <div class="summary-bar" id="personal-summary"></div>
-    <div class="insight-row" id="personal-insights"></div>
     <div class="section-header">
       <h2>My Recent Purchases</h2>
-      <a onclick="showTab('log')">View all company purchases →</a>
+      <a onclick="showTab('log')">View all purchases →</a>
     </div>
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>Receipt ID</th><th>Date</th><th>Description</th><th>Vendor</th>
-          <th>Category</th><th>Amount</th><th>Billable</th><th>Receipt</th><th></th>
+          <th>Date</th><th>Description</th><th>Vendor</th>
+          <th>Amount</th><th>Receipt</th><th></th>
         </tr></thead>
         <tbody id="my-purchases-body"></tbody>
       </table>
@@ -448,22 +446,10 @@
   </main>
 </div>
 
-<!-- ══════════ DASHBOARD TAB ══════════ -->
-<div id="tab-dash" style="display:none">
+<!-- ══════════ PROJECTS TAB ══════════ -->
+<div id="tab-projects" style="display:none">
   <main>
-    <div class="summary-bar" id="dash-summary"></div>
-    <div class="dash-grid">
-      <div class="dash-card"><h3>Spend by Category</h3><div id="chart-category"></div></div>
-      <div class="dash-card"><h3>Spend by Employee</h3><div id="chart-person"></div></div>
-      <div class="dash-card"><h3>Billable vs Non-Billable vs Unsure</h3><div id="chart-billable"></div></div>
-      <div class="dash-card"><h3>Monthly Spend Trend (Last 6 Months)</h3><div id="chart-monthly"></div></div>
-      <div class="dash-card"><h3>Top Vendors by Spend</h3><div id="chart-vendors"></div></div>
-      <div class="dash-card"><h3>Largest Single Purchases</h3><div id="chart-top-purchases"></div></div>
-      <div class="dash-card"><h3>Billable Split by Employee</h3><div id="chart-billable-person"></div></div>
-      <div class="dash-card"><h3>Purchase Activity by Day of Week</h3><div id="chart-activity"></div></div>
-      <div class="dash-card"><h3>Approval Status</h3><div id="chart-approval"></div></div>
-      <div class="dash-card"><h3>Billable Spend by Project</h3><div id="chart-projects"></div></div>
-    </div>
+    <div id="projects-content"></div>
   </main>
 </div>
 
@@ -496,11 +482,9 @@
       </div>
       <div class="form-group full" id="project-group">
         <label>Project Name <span class="req" id="project-req" style="display:none">*</span> <span id="project-hint" style="color:var(--muted);font-weight:400;font-size:11px">(optional)</span></label>
-        <select id="f-project-select" onchange="onProjectSelectChange('f-project-select','f-project-new')">
+        <select id="f-project-select">
           <option value="">— Select project —</option>
-          <option value="__other__">＋ Other (add new project…)</option>
         </select>
-        <input type="text" id="f-project-new" placeholder="New project name…" autocomplete="off" style="display:none;margin-top:8px;width:100%" />
       </div>
       <div class="form-group full">
         <label>Category <span class="req">*</span></label>
@@ -579,6 +563,26 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('no-receipt-modal')">Go Back &amp; Add Receipt</button>
       <button class="btn-confirm" onclick="confirmSaveNoReceipt()">Save Without Receipt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PROJECT MODAL ══════════ -->
+<div class="modal-overlay" id="project-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3 id="project-modal-title">Add Project</h3>
+      <button class="modal-close" onclick="closeModal('project-modal')">✕</button>
+    </div>
+    <div class="form-grid" style="padding:20px 24px 0">
+      <div class="form-group full">
+        <label>Project Name <span class="req">*</span></label>
+        <input type="text" id="proj-name" placeholder="e.g. Anchorage Site Survey 2026" autocomplete="off" style="width:100%">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('project-modal')">Cancel</button>
+      <button class="btn-confirm" id="project-save-btn" onclick="saveProject()">💾 Save Project</button>
     </div>
   </div>
 </div>
@@ -712,7 +716,8 @@ const CONFIG = {
 // ════════════════════════════════════════════════
 
 const SCOPES = ['https://graph.microsoft.com/Sites.ReadWrite.All','https://graph.microsoft.com/Files.ReadWrite.All'];
-let msalInstance=null, siteId=null, purchases=[], projectNames=[], currentUser=null, pollTimer=null;
+let msalInstance=null, siteId=null, purchases=[], projectNames=[], projectItems=[], currentUser=null, pollTimer=null;
+let editingProjectId = null;
 let selectedFile=null, editingItemId=null, editingReceiptId=null;
 let sortField='purchaseDate', sortDir='desc', billableValue='';
 
@@ -769,7 +774,6 @@ async function startApp() {
   currentUser = { name: account.name || account.username.split('@')[0], email: account.username };
   document.getElementById('user-name').textContent   = currentUser.name;
   document.getElementById('user-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
-  document.getElementById('hero-greeting').textContent = `Welcome back, ${currentUser.name.split(' ')[0]}!`;
   showLoading('Connecting to SharePoint…');
   try {
     const site = await graph(`/sites/${CONFIG.siteHostname}`);
@@ -787,11 +791,13 @@ async function startApp() {
 async function loadProjectNames() {
   try {
     const res = await graph(`/sites/${siteId}/lists/${encodeURIComponent(CONFIG.projectNamesListName)}/items?$expand=fields&$top=500`);
-    projectNames = (res.value || [])
-      .map(item => item.fields.Title || '')
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
+    projectItems = (res.value || [])
+      .map(item => ({ itemId: item.id, name: item.fields.Title || '' }))
+      .filter(x => x.name)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    projectNames = projectItems.map(x => x.name);
     populateProjectNameDropdown();
+    if (document.getElementById('tab-projects').style.display === 'block') renderProjects();
   } catch (e) { console.warn('Could not load project names', e); }
 }
 
@@ -801,8 +807,7 @@ function populateProjectNameDropdown() {
   const cur = sel.value;
   sel.innerHTML =
     '<option value="">— Select project —</option>' +
-    projectNames.map(n => `<option value="${esc(n)}"${n === cur ? ' selected' : ''}>${esc(n)}</option>`).join('') +
-    `<option value="__other__"${cur === '__other__' ? ' selected' : ''}>＋ Other (add new project…)</option>`;
+    projectNames.map(n => `<option value="${esc(n)}"${n === cur ? ' selected' : ''}>${esc(n)}</option>`).join('');
 }
 
 async function addNewProjectName(name) {
@@ -858,7 +863,6 @@ async function toggleApproved(itemId, newVal) {
   if (!p) return;
   p.approved = newVal; // optimistic
   updateUnapprovedBadge();
-  if (document.getElementById('tab-dash').style.display!=='none') renderDash();
   try {
     await graph(`/sites/${siteId}/lists/${encodeURIComponent(CONFIG.purchasesListName)}/items/${itemId}`, {
       method: 'PATCH', body: JSON.stringify({ fields: { Approved: newVal ? 'Yes' : 'No' } })
@@ -908,91 +912,29 @@ function filterUnapproved() {
 // ── Render ─────────────────────────────────────────────────────
 function renderAll() {
   renderHome();
-  if (document.getElementById('tab-log').style.display  !== 'none') renderLog();
-  if (document.getElementById('tab-dash').style.display !== 'none') renderDash();
+  if (document.getElementById('tab-log').style.display      !== 'none') renderLog();
+  if (document.getElementById('tab-projects').style.display !== 'none') renderProjects();
 }
 
 // ── HOME ──────────────────────────────────────────────────────
 function renderHome() {
+  document.getElementById('hero-greeting').textContent = `Welcome back, ${currentUser.name.split(' ')[0]}!`;
   const mine = purchases.filter(p => p.submittedByEmail === currentUser.email);
-  const thisMonth  = new Date().toISOString().slice(0,7);
-  const lastMonth  = (() => { const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); })();
-  const totalSpend = mine.reduce((s,p)=>s+p.amount,0);
-  const monthSpend = mine.filter(p=>p.purchaseDate.startsWith(thisMonth)).reduce((s,p)=>s+p.amount,0);
-  const lastMoSpend= mine.filter(p=>p.purchaseDate.startsWith(lastMonth)).reduce((s,p)=>s+p.amount,0);
-  const billSpend  = mine.filter(p=>p.billable==='Billable').reduce((s,p)=>s+p.amount,0);
-  const nonBSpend  = mine.filter(p=>p.billable==='Non-billable').reduce((s,p)=>s+p.amount,0);
-  const unsureSpend= mine.filter(p=>p.billable==='Unsure').reduce((s,p)=>s+p.amount,0);
-  const delta      = monthSpend - lastMoSpend;
-  const deltaStr   = (delta>=0?'▲':'▼') + ' ' + fmt(Math.abs(delta)) + ' vs last month';
-
-  document.getElementById('personal-summary').innerHTML = `
-    <div class="stat-card"><span class="label">My Purchases</span><span class="value">${mine.length}</span><span class="sub">all time</span></div>
-    <div class="stat-card money"><span class="label">My Total Spend</span><span class="value">${fmt(totalSpend)}</span><span class="sub">all time</span></div>
-    <div class="stat-card money"><span class="label">My Spend This Month</span><span class="value">${fmt(monthSpend)}</span><span class="sub" style="color:${delta<=0?'#16a34a':'var(--red)'}">${lastMoSpend>0?deltaStr:thisMonth}</span></div>
-    <div class="stat-card"><span class="label">This Month</span><span class="value">${mine.filter(p=>p.purchaseDate.startsWith(thisMonth)).length}</span><span class="sub">receipts logged</span></div>
-    <div class="stat-card purple"><span class="label">Avg Purchase</span><span class="value">${mine.length?fmt(totalSpend/mine.length):'$0'}</span><span class="sub">per receipt</span></div>
-  `;
-
-  const byCat  = {};
-  mine.forEach(p=>{byCat[p.category]=(byCat[p.category]||0)+p.amount;});
-  const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
-  const recentCats = [...new Set(mine.sort((a,b)=>b.purchaseDate.localeCompare(a.purchaseDate)).slice(0,5).map(p=>p.category).filter(Boolean))];
-
-  document.getElementById('personal-insights').innerHTML = `
-    <div class="insight-card">
-      <h4>My Billable Classification</h4>
-      <div class="insight-split">
-        <div class="insight-half green"><div class="val">${fmt(billSpend)}</div><div class="lbl">Billable</div></div>
-        <div class="insight-half yellow"><div class="val">${fmt(nonBSpend)}</div><div class="lbl">Non-Billable</div></div>
-        <div class="insight-half blue"><div class="val">${fmt(unsureSpend)}</div><div class="lbl">Unsure</div></div>
-      </div>
-      <div style="margin-top:12px">
-        <div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex">
-          <div style="height:100%;background:#22c55e;width:${totalSpend?billSpend/totalSpend*100:0}%"></div>
-          <div style="height:100%;background:#f59e0b;width:${totalSpend?nonBSpend/totalSpend*100:0}%"></div>
-          <div style="height:100%;background:#3b82f6;flex:1"></div>
-        </div>
-        <div style="display:flex;gap:12px;margin-top:4px;font-size:11px;color:var(--muted)">
-          <span style="color:#16a34a">● Billable</span>
-          <span style="color:#f59e0b">● Non-Billable</span>
-          <span style="color:#3b82f6">● Unsure</span>
-        </div>
-      </div>
-    </div>
-    <div class="insight-card">
-      <h4>My Top Spending Category</h4>
-      ${topCat ? `
-        <div style="font-size:22px;font-weight:800;color:var(--brand);margin-bottom:4px">${esc(topCat[0])}</div>
-        <div style="font-size:14px;font-weight:700;color:#16a34a">${fmt(topCat[1])}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">${Object.keys(byCat).length} categories used total</div>
-      ` : '<div style="color:var(--muted);font-size:13px">No purchases yet.</div>'}
-    </div>
-    <div class="insight-card">
-      <h4>My Recent Categories</h4>
-      ${recentCats.length
-        ? recentCats.map(c=>`<span class="cat-badge" style="margin:3px 3px 0 0">${esc(c)}</span>`).join('')
-        : '<div style="color:var(--muted);font-size:13px">No purchases yet.</div>'}
-    </div>
-  `;
-
   const recent = [...mine].sort((a,b)=>b.purchaseDate.localeCompare(a.purchaseDate)).slice(0,10);
   const tbody = document.getElementById('my-purchases-body');
   tbody.innerHTML = recent.length
     ? recent.map(p => homeRow(p)).join('')
-    : `<tr><td colspan="9" class="empty-state"><div class="ei">🧾</div>No purchases yet. Click "+ Log a Purchase" to get started.</td></tr>`;
+    : `<tr><td colspan="6" class="empty-state"><div class="ei">🧾</div>No purchases yet. Click "+ Log a Purchase" to get started.</td></tr>`;
 }
+
 
 function homeRow(p) {
   const receipt = p.receiptUrl ? `<a class="receipt-link" href="${p.receiptUrl}" target="_blank">📎 View</a>` : `<span style="color:var(--muted);font-size:11px">—</span>`;
   return `<tr>
-    <td style="font-family:monospace;font-size:11px">${esc(p.receiptId)}</td>
     <td>${p.purchaseDate}</td>
-    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.description)}">${esc(p.description)}</td>
+    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.description)}">${esc(p.description)}</td>
     <td>${esc(p.vendor)}</td>
-    <td><span class="cat-badge">${esc(p.category)}</span></td>
     <td class="amount-cell">${fmt(p.amount)}</td>
-    <td><span class="pill ${billableClass(p.billable)}">${esc(p.billable)}</span></td>
     <td>${receipt}</td>
     <td><button class="btn-sm edit" onclick="openEditModal('${p.itemId}')">Edit</button></td>
   </tr>`;
@@ -1232,9 +1174,7 @@ function openPurchaseModal() {
   document.getElementById('f-reason').value      = '';
   document.getElementById('f-category').value    = '';
   populateProjectNameDropdown();
-  document.getElementById('f-project-select').value   = '';
-  document.getElementById('f-project-new').value      = '';
-  document.getElementById('f-project-new').style.display = 'none';
+  document.getElementById('f-project-select').value = '';
   document.getElementById('amount-alert').classList.remove('show');
   document.getElementById('project-req').style.display = 'none';
   document.getElementById('project-hint').textContent  = '(optional)';
@@ -1258,17 +1198,10 @@ function openEditModal(itemId) {
   document.getElementById('f-amount').value      = p.amount;
   document.getElementById('f-reason').value      = p.reason;
   document.getElementById('f-category').value    = p.category;
-  // Restore project — match to list or fall back to Other
+  // Restore project — match to list
   populateProjectNameDropdown();
   const rtProjSel = document.getElementById('f-project-select');
-  const rtProjNew = document.getElementById('f-project-new');
-  if (p.project && projectNames.includes(p.project)) {
-    rtProjSel.value = p.project; rtProjNew.style.display = 'none';
-  } else if (p.project) {
-    rtProjSel.value = '__other__'; rtProjNew.value = p.project; rtProjNew.style.display = 'block';
-  } else {
-    rtProjSel.value = ''; rtProjNew.value = ''; rtProjNew.style.display = 'none';
-  }
+  rtProjSel.value = (p.project && projectNames.includes(p.project)) ? p.project : '';
   document.getElementById('amount-alert').classList.remove('show');
   document.getElementById('toggle-yes').classList.toggle('active',   p.billable==='Billable');
   document.getElementById('toggle-no').classList.toggle('active',    p.billable==='Non-billable');
@@ -1359,10 +1292,7 @@ async function savePurchase(skipDupCheck=false, skipReceiptCheck=false) {
         desc=document.getElementById('f-description').value.trim(), vendor=document.getElementById('f-vendor').value.trim(),
         amount=parseFloat(document.getElementById('f-amount').value), reason=document.getElementById('f-reason').value.trim(),
         category=document.getElementById('f-category').value;
-  const rtProjSelVal = document.getElementById('f-project-select').value;
-  const project = rtProjSelVal === '__other__'
-    ? document.getElementById('f-project-new').value.trim()
-    : rtProjSelVal;
+  const project = document.getElementById('f-project-select').value;
   if (!name)            return toast('Employee name is required','error');
   if (!date)            return toast('Purchase date is required','error');
   if (!desc)            return toast('Description is required','error');
@@ -1372,7 +1302,7 @@ async function savePurchase(skipDupCheck=false, skipReceiptCheck=false) {
   if (!billableValue)   return toast('Select Billable, Non-billable, or Unsure','error');
   if (!category)        return toast('Select a category','error');
   if (billableValue==='Billable' && !project) {
-    document.getElementById(rtProjSelVal === '__other__' ? 'f-project-new' : 'f-project-select').focus();
+    document.getElementById('f-project-select').focus();
     return toast('Project Name is required for billable purchases','error');
   }
 
@@ -1422,7 +1352,6 @@ async function savePurchase(skipDupCheck=false, skipReceiptCheck=false) {
       await graph(`/sites/${siteId}/lists/${encodeURIComponent(CONFIG.purchasesListName)}/items`,{method:'POST',body:JSON.stringify({fields})});
       toast('Logged! Receipt ID: '+receiptId,'success');
     }
-    if (rtProjSelVal === '__other__' && project) await addNewProjectName(project);
     closeModal('purchase-modal'); await refreshData();
   } catch(e){ console.error(e); toast('Error: '+e.message,'error'); }
   finally { btn.disabled=false; hideSaveOverlay(); }
@@ -1566,11 +1495,98 @@ function runExport() {
   closeModal('export-modal');
 }
 
+// ── Projects CRUD ──────────────────────────────────────────────
+function renderProjects() {
+  const el = document.getElementById('projects-content');
+  const rows = projectItems.length === 0
+    ? `<tr><td colspan="2" style="text-align:center;padding:40px;color:var(--muted)">No projects yet. Click "Add Project" to get started.</td></tr>`
+    : projectItems.map(p => `
+      <tr>
+        <td style="font-weight:700;color:var(--brand);padding:12px 16px">${esc(p.name)}</td>
+        <td style="padding:12px 16px">
+          <div style="display:flex;gap:6px">
+            <button class="btn-sm edit" onclick="openEditProject('${p.itemId}')">Edit</button>
+            <button class="btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5" onclick="deleteProject('${p.itemId}')">Delete</button>
+          </div>
+        </td>
+      </tr>`).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:24px 24px 12px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2 style="font-size:20px;font-weight:700;color:var(--brand);margin:0">Projects</h2>
+        <p style="font-size:13px;color:var(--muted);margin-top:4px">Shared project list used in both the Receipt Tracker and Expense Tracker.</p>
+      </div>
+      <button class="btn-accent" onclick="openAddProject()">+ Add Project</button>
+    </div>
+    <div style="padding:0 24px 24px">
+      <table style="width:100%;border-collapse:collapse;background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)">
+        <thead><tr style="background:var(--bg)">
+          <th style="text-align:left;padding:10px 16px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Project Name</th>
+          <th style="width:120px"></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function openAddProject() {
+  editingProjectId = null;
+  document.getElementById('project-modal-title').textContent = 'Add Project';
+  document.getElementById('project-save-btn').textContent    = '💾 Save Project';
+  document.getElementById('proj-name').value = '';
+  document.getElementById('project-modal').classList.add('open');
+  setTimeout(() => document.getElementById('proj-name').focus(), 60);
+}
+
+function openEditProject(itemId) {
+  const p = projectItems.find(x => x.itemId === itemId);
+  if (!p) return;
+  editingProjectId = itemId;
+  document.getElementById('project-modal-title').textContent = 'Edit Project';
+  document.getElementById('project-save-btn').textContent    = '✓ Save Changes';
+  document.getElementById('proj-name').value = p.name;
+  document.getElementById('project-modal').classList.add('open');
+  setTimeout(() => document.getElementById('proj-name').focus(), 60);
+}
+
+async function saveProject() {
+  const name = document.getElementById('proj-name').value.trim();
+  if (!name) { document.getElementById('proj-name').focus(); return toast('Project name is required','error'); }
+  const btn = document.getElementById('project-save-btn'); btn.disabled = true;
+  try {
+    if (editingProjectId) {
+      await graph(`/sites/${siteId}/lists/${encodeURIComponent(CONFIG.projectNamesListName)}/items/${editingProjectId}`,
+        { method: 'PATCH', body: JSON.stringify({ fields: { Title: name } }) });
+      toast('Project updated', 'success');
+    } else {
+      await graph(`/sites/${siteId}/lists/${encodeURIComponent(CONFIG.projectNamesListName)}/items`,
+        { method: 'POST', body: JSON.stringify({ fields: { Title: name } }) });
+      toast('Project added', 'success');
+    }
+    closeModal('project-modal');
+    await loadProjectNames();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { btn.disabled = false; }
+}
+
+async function deleteProject(itemId) {
+  const p = projectItems.find(x => x.itemId === itemId);
+  if (!p) return;
+  if (!confirm(`Delete project "${p.name}"? This cannot be undone.`)) return;
+  try {
+    await graph(`/sites/${siteId}/lists/${encodeURIComponent(CONFIG.projectNamesListName)}/items/${itemId}`,
+      { method: 'DELETE' });
+    toast('Project deleted', 'info');
+    await loadProjectNames();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
 // ── UI Helpers ─────────────────────────────────────────────────
 function showTab(tab) {
-  ['home','log','dash'].forEach(t=>{ document.getElementById('tab-'+t).style.display=t===tab?'block':'none'; document.getElementById('nav-'+t).classList.toggle('active',t===tab); });
-  if (tab==='log')  renderLog();
-  if (tab==='dash') renderDash();
+  ['home','log','projects'].forEach(t=>{ document.getElementById('tab-'+t).style.display=t===tab?'block':'none'; document.getElementById('nav-'+t).classList.toggle('active',t===tab); });
+  if (tab==='log')      renderLog();
+  if (tab==='projects') renderProjects();
 }
 function showLoading(msg){document.getElementById('loading-screen').style.display='flex';document.getElementById('signin-screen').style.display='none';document.getElementById('loading-msg').textContent=msg;}
 function showSignIn()    {document.getElementById('loading-screen').style.display='none';document.getElementById('signin-screen').style.display='flex';}
